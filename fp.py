@@ -63,11 +63,11 @@ def gradients(data):
         total += s
         total_s += s
         total_d += d
-        if i == int(len(data) / 3):
+        if i == int((len(data) - 1) / 3):
             left = divide(total_s, total_d)
             total_s = 0
             total_d = 0
-        elif i == int(len(data) * 2 / 3):
+        elif i == int((len(data) - 1) * 2 / 3):
             mid = divide(total_s, total_d)
             total_s = 0
             total_d = 0
