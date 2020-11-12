@@ -49,7 +49,6 @@ def extract(in_data, out_data, target):
     left_in, mid_in, right_in, in_total = gradients(in_data)
     left_out, mid_out, right_out, out_total = gradients(out_data)
     return [left_in, mid_in, right_in, left_out, mid_out, right_out, target]
-    # divide(in_total, out_total), divide(len(in_data), len(out_data)), target]
 
 
 def gradients(data):
@@ -86,6 +85,17 @@ def evaluate(data, split=35, metric='distance', k=7):
     neigh = KNeighborsClassifier(n_neighbors=k, weights=metric)
     neigh.fit(X_train, y_train)
     return neigh.score(X_test, y_test)
+
+
+def predict(data, test, metric='distance', k=8):
+    X = preprocessing.normalize(data[features])
+    y = data[label]
+
+    neigh = KNeighborsClassifier(n_neighbors=k, weights=metric)
+    neigh.fit(X, y)
+
+    # TODO
+    return neigh.predict(test)
 
 
 if __name__ == '__main__':
