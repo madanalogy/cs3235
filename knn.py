@@ -117,7 +117,7 @@ def execute(obs1, obs2):
     result2 = model.predict(preprocessing.normalize(test2[features]))
     with open('../result.txt', 'w') as fp:
         for i in range(35):
-            fp.write(result1[i] + ' ' + result2[i] + '\n')
+            fp.write(str(int(result1[i])) + ' ' + str(int(result2[i])) + '\n')
 
 
 if __name__ == '__main__':
