@@ -1,3 +1,4 @@
+import sys
 import datetime
 import pandas as pd
 import numpy as np
@@ -5,8 +6,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 
-raw = ['time', 'size', 'direction']
-features = ['left_in', 'mid_in',  'right_in', 'left_out', 'mid_out', 'right_out']
+features = ['left_in', 'mid_in', 'right_in', 'left_out', 'mid_out', 'right_out']
 label = 'label'
 cols = features.copy()
 cols.append(label)
@@ -20,31 +20,36 @@ def divide(top, bot):
     return top / bot if bot else 0
 
 
-def load(directory='traces/profile', n=35, k=8):
+def load(prefix='traces/profile', n=35, k=8):
     data = []
     for i in range(k):
         for j in range(n):
-            in_data = []
-            out_data = []
-            with open(directory + str(i + 1) + '/' + str(j + 1)) as fp:
-                for line in fp:
-                    time, size, dir = line.split()
-                    hrs, mins, secs = time.split(':')
-                    secs, micro = secs.split('.')
-                    size = int(size)
-                    if size != 0:
-                        d = datetime.timedelta(
-                            hours=int(hrs), minutes=int(mins), seconds=int(secs), microseconds=int(micro)
-                        )
-                        if dir == 'in':
-                            in_data.append((delta(d), size))
-                        else:
-                            out_data.append((delta(d), size))
+            with open(prefix + str(i + 1) + '/' + str(j + 1)) as fp:
+                in_data, out_data = cycle(fp)
             data.append(extract(in_data, out_data, j + 1))
     return pd.DataFrame(np.array(data), columns=cols)
 
 
-def extract(in_data, out_data, target):
+def cycle(fp):
+    in_data = []
+    out_data = []
+    for line in fp:
+        time, size, dir = line.split()
+        hrs, mins, secs = time.split(':')
+        secs, micro = secs.split('.')
+        size = int(size)
+        if size != 0:
+            d = datetime.timedelta(
+                hours=int(hrs), minutes=int(mins), seconds=int(secs), microseconds=int(micro)
+            )
+            if dir == 'in':
+                in_data.append((delta(d), size))
+            else:
+                out_data.append((delta(d), size))
+    return in_data, out_data
+
+
+def extract(in_data, out_data, target=0):
     left_in, mid_in, right_in, in_total = gradients(in_data)
     left_out, mid_out, right_out, out_total = gradients(out_data)
     return [left_in, mid_in, right_in, left_out, mid_out, right_out, target]
@@ -86,16 +91,34 @@ def evaluate(data, split=35, metric='distance', k=7):
     return neigh.score(X_test, y_test)
 
 
-def predict(data, test, metric='distance', k=8):
+def prepare(data, metric='distance', k=8):
     X = preprocessing.normalize(data[features])
     y = data[label]
 
     neigh = KNeighborsClassifier(n_neighbors=k, weights=metric)
     neigh.fit(X, y)
+    return neigh
 
-    # TODO
-    return neigh.predict(test)
+
+def observe(obs, prefix='../', suffix='-anon'):
+    data = []
+    for i in range(35):
+        with open(prefix + obs + '/' + str(i + 1) + suffix) as fp:
+            in_data, out_data = cycle(fp)
+        data.append(extract(in_data, out_data, i + 1))
+    return pd.DataFrame(np.array(data), columns=cols)
+
+
+def execute(obs1, obs2):
+    model = prepare(load())
+    test1 = observe(obs1)
+    test2 = observe(obs2)
+    result1 = model.predict(preprocessing.normalize(test1[features]))
+    result2 = model.predict(preprocessing.normalize(test2[features]))
+    with open('../result.txt', 'w') as fp:
+        for i in range(35):
+            fp.write(result1[i] + ' ' + result2[i] + '\n')
 
 
 if __name__ == '__main__':
-    print(evaluate(load()))
+    execute(sys.argv[1], sys.argv[2])
